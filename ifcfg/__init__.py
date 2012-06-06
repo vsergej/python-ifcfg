@@ -54,8 +54,8 @@ def interfaces(**kw):
     Return just the parsed interfaces dictionary from the proper parser.
     
     """
-    parser = get_parser(*kw)
-    return parser.interfaces
+    parser = get_parser(**kw)
+    return parser.interfaces()
 
 def default_interface(**kw):
     """
@@ -63,5 +63,5 @@ def default_interface(**kw):
     
     """
     parser = get_parser(**kw)
-    return parser.default_interface
+    return parser.default_interface()
 

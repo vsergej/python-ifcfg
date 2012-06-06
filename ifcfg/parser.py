@@ -55,7 +55,9 @@ class IfcfgParser(MetaMixin):
         all_keys = []
         
         for line in self.ifconfig_data.splitlines():
+            print(line)
             for pattern in self._get_patterns():
+                print(pattern)
                 m = re.match(pattern, str(line))
                 if m:
                     groupdict = m.groupdict()
@@ -108,8 +110,7 @@ class IfcfgParser(MetaMixin):
                     interfaces[device]['hostname'] = None
                                     
         return interfaces
-        
-    @property
+
     def interfaces(self):
         """
         Returns the full interfaces dictionary.
@@ -117,7 +118,6 @@ class IfcfgParser(MetaMixin):
         """
         return self._interfaces
         
-    @property
     def default_interface(self):
         """
         Returns the default interface device.
@@ -132,9 +132,9 @@ class IfcfgParser(MetaMixin):
                 break
                 
         if iface:            
-            for interface in self.interfaces:
+            for interface in self._interfaces:
                 if interface == iface:
-                    return self.interfaces[interface]
+                    return self._interfaces[interface]
         return None # pragma: nocover
         
 class UnixParser(IfcfgParser):
@@ -174,12 +174,11 @@ class MacOSXParser(UnixParser):
         super(MacOSXParser, self).parse(*args, **kw)
         
         # fix up netmask address for mac
-        for device,device_dict in list(self.interfaces.items()):
+        for device,device_dict in list(self._interfaces.items()):
             if device_dict['netmask'] is not None:
-                netmask = self.interfaces[device]['netmask']
-                self.interfaces[device]['netmask'] = hex2dotted(netmask)
+                netmask = self._interfaces[device]['netmask']
+                self._interfaces[device]['netmask'] = hex2dotted(netmask)
             
-    @property
     def default_interface(self):
         """
         Returns the default interface device.
@@ -197,7 +196,7 @@ class MacOSXParser(UnixParser):
                 break
                 
         if iface:            
-            for interface in self.interfaces:
+            for interface in self._interfaces:
                 if interface == iface:
-                    return self.interfaces[interface]
+                    return self._interfaces[interface]
         return None # pragma: nocover
