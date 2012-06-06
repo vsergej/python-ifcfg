@@ -28,17 +28,17 @@ def get_parser(**kw):
     """
     parser = kw.get('parser', None)
     ifconfig = kw.get('ifconfig', None)
+    distro = kw.get('distro', platform.system())
+    full_kernel = kw.get('kernel', platform.uname()[2])
+    kernel = '.'.join(full_kernel.split('.')[0:2]) 
+    Log.debug("Distro detected as '%s'" % distro)
+    
     if not parser:
-        distro = kw.get('distro', platform.system())
-        full_kernel = kw.get('kernel', platform.uname()[2])
-        kernel = '.'.join(full_kernel.split('.')[0:2]) 
-        
         if distro == 'Linux':
             if float(kernel) < 3.3:
                 from .parser import Linux2Parser as LinuxParser
             else:
                 from .parser import LinuxParser
-            print LinuxParser
             parser = LinuxParser(ifconfig=ifconfig)
         elif distro in ['Darwin', 'MacOSX']:
             from .parser import MacOSXParser
@@ -46,23 +46,22 @@ def get_parser(**kw):
         else:
             raise exc.IfcfgParserError("Unknown distro type '%s'." % distro)
     
-    Log.debug("Distro detected as '%s'" % distro)
     Log.debug("Using '%s'" % parser)        
     return parser
     
-def interfaces():
+def interfaces(**kw):
     """
     Return just the parsed interfaces dictionary from the proper parser.
     
     """
-    parser = get_parser()
+    parser = get_parser(*kw)
     return parser.interfaces
 
-def default_interface():
+def default_interface(**kw):
     """
     Return just the default interface device dictionary.
     
     """
-    parser = get_parser()
+    parser = get_parser(**kw)
     return parser.default_interface
 

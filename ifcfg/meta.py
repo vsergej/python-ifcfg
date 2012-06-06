@@ -11,7 +11,7 @@ class Meta(object):
         self._merge(kw)
 
     def _merge(self, dict_obj):
-        for key, value in dict_obj.items():
+        for key, value in list(dict_obj.items()):
             setattr(self, key, value)
             
 class MetaMixin(object):

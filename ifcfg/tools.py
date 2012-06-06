@@ -10,8 +10,8 @@ def minimal_logger(name):
     console = logging.StreamHandler()
     console.setFormatter(formatter)
     console.setLevel(logging.DEBUG)   
-    
-    if 'IFCFG_DEBUG' in os.environ.keys() and os.environ['IFCFG_DEBUG'] == '1':
+
+    if 'IFCFG_DEBUG' in list(os.environ.keys()) and os.environ['IFCFG_DEBUG'] == '1':
         log.setLevel(logging.DEBUG)
         log.addHandler(console)
     return log
@@ -30,3 +30,9 @@ def hex2dotted(hex_num):
     z = int(num[6:8], 16)
 
     return "%d.%d.%d.%d" % (w, x, y, z)
+
+def full_bin_path(bin):
+    for path in ['/bin', '/sbin', '/usr/bin', '/usr/sbin']:
+        if os.path.exists(os.path.join(path, bin)):
+            return os.path.join(path, bin)
+    return bin

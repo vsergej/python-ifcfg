@@ -61,4 +61,6 @@ class IfcfgTestCase(unittest.TestCase):
     
     def test_default_interface(self):
         res = ifcfg.default_interface()
+        res = ifcfg.default_interface(parser=ifcfg.parser.LinuxParser, 
+                                      ifconfig=ifconfig_out.LINUX)
         ok_(res)

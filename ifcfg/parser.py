@@ -3,13 +3,12 @@ import re
 import socket
     
 from .meta import MetaMixin
-from .tools import exec_cmd, hex2dotted, minimal_logger
+from .tools import exec_cmd, hex2dotted, minimal_logger, full_bin_path
 
 Log = minimal_logger(__name__)
 
 class IfcfgParser(MetaMixin):
     class Meta:
-        ifconfig_cmd_args = ['ifconfig', '-a']
         patterns = [
             '(?P<device>^[a-zA-Z0-9]+): flags=(?P<flags>.*) mtu (?P<mtu>.*)',
             '.*(inet )(?P<inet>[^\s]*).*',
@@ -32,6 +31,11 @@ class IfcfgParser(MetaMixin):
     def _get_patterns(self):
         return self._meta.patterns + self._meta.override_patterns
             
+    def _get_ifconfig_data(self):
+        cmd_args = [full_bin_path('ifconfig'), '-a']
+        ifconfig, err, retcode = exec_cmd(cmd_args)
+        return ifconfig
+        
     def parse(self, ifconfig=None):
         """
         Parse ifconfig output into self._interfaces.
@@ -40,31 +44,31 @@ class IfcfgParser(MetaMixin):
         
             ifconfig
                 The data (stdout) from the ifconfig command.  Default is to
-                call self._meta.ifconfig_cmd_args for the stdout.
+                call ifconfig for the stdout.
                 
         """
-        _interfaces = []
         if not ifconfig:
-            ifconfig, err, retcode = exec_cmd(self._meta.ifconfig_cmd_args)
+            ifconfig = self._get_ifconfig_data()
+            
         self.ifconfig_data = ifconfig
         cur = None
         all_keys = []
         
         for line in self.ifconfig_data.splitlines():
             for pattern in self._get_patterns():
-                m = re.match(pattern, line)
+                m = re.match(pattern, str(line))
                 if m:
                     groupdict = m.groupdict()
                     # Special treatment to trigger which interface we're 
                     # setting for if 'device' is in the line.  Presumably the
                     # device of the interface is within the first line of the
                     # device block.
-                    if 'device' in groupdict:
+                    if 'device' in list(groupdict.keys()):
                         cur = groupdict['device']
-                        if not self._interfaces.has_key(cur):
+                        if cur not in list(self._interfaces.keys()):
                             self._interfaces[cur] = {}
                     
-                    for key in groupdict:
+                    for key in list(groupdict.keys()):
                         if key not in all_keys:
                             all_keys.append(key)
                         self._interfaces[cur][key] = groupdict[key]
@@ -74,7 +78,7 @@ class IfcfgParser(MetaMixin):
         
         # standardize
         for key in all_keys:
-            for device,device_dict in self._interfaces.items():
+            for device,device_dict in list(self._interfaces.items()):
                 if key not in device_dict:
                     self._interfaces[device][key] = None
                 if type(device_dict[key]) == str:
@@ -95,7 +99,7 @@ class IfcfgParser(MetaMixin):
         
         """
         # fixup some things
-        for device,device_dict in interfaces.items():
+        for device,device_dict in list(interfaces.items()):
             if 'inet' in device_dict:
                 try:
                     host = socket.gethostbyaddr(device_dict['inet'])[0]
@@ -119,15 +123,18 @@ class IfcfgParser(MetaMixin):
         Returns the default interface device.
         
         """
-        out, err, ret = exec_cmd(['/sbin/route', '-n'])
+        out, err, ret = exec_cmd([full_bin_path('route'), '-n'])
         lines = out.splitlines()
-        for line in lines[2:]:
+        iface = None
+        for line in lines:
             if line.split()[0] == '0.0.0.0':
                 iface = line.split()[-1]
-
-        for interface in self.interfaces:
-            if interface == iface:
-                return self.interfaces[interface]
+                break
+                
+        if iface:            
+            for interface in self.interfaces:
+                if interface == iface:
+                    return self.interfaces[interface]
         return None # pragma: nocover
         
 class UnixParser(IfcfgParser):
@@ -167,7 +174,30 @@ class MacOSXParser(UnixParser):
         super(MacOSXParser, self).parse(*args, **kw)
         
         # fix up netmask address for mac
-        for device,device_dict in self.interfaces.items():
+        for device,device_dict in list(self.interfaces.items()):
             if device_dict['netmask'] is not None:
                 netmask = self.interfaces[device]['netmask']
                 self.interfaces[device]['netmask'] = hex2dotted(netmask)
+            
+    @property
+    def default_interface(self):
+        """
+        Returns the default interface device.
+        
+        """
+        cmd_args = [full_bin_path('route'), '-n', 'get', 'default']
+        out, err, ret = exec_cmd(cmd_args)
+        lines = out.splitlines()
+        iface = None
+        for line in lines:
+            key = line.split(': ')[0].strip()
+            value = line.split(': ')[1].strip()
+            if key == 'interface':
+                iface = value
+                break
+                
+        if iface:            
+            for interface in self.interfaces:
+                if interface == iface:
+                    return self.interfaces[interface]
+        return None # pragma: nocover
