@@ -10,7 +10,7 @@ Log = minimal_logger(__name__)
 class IfcfgParser(MetaMixin):
     class Meta:
         patterns = [
-            '(?P<device>^[a-zA-Z0-9]+): flags=(?P<flags>.*) mtu (?P<mtu>.*)',
+            '(?P<device>^[a-zA-Z0-9_-]+): flags=(?P<flags>.*) mtu (?P<mtu>.*)',
             '.*(inet )(?P<inet>[^\s]*).*',
             '.*(inet6 )(?P<inet6>[^\s]*).*',
             '.*(broadcast )(?P<broadcast>[^\s]*).*',
@@ -55,9 +55,7 @@ class IfcfgParser(MetaMixin):
         all_keys = []
         
         for line in self.ifconfig_data.splitlines():
-            print(line)
             for pattern in self._get_patterns():
-                print(pattern)
                 m = re.match(pattern, str(line))
                 if m:
                     groupdict = m.groupdict()
@@ -148,7 +146,7 @@ class LinuxParser(UnixParser):
 class Linux2Parser(LinuxParser):
     class Meta:
         override_patterns = [
-            '(?P<device>^[a-zA-Z0-9]+)(.*)Link encap:(.*).*',
+            '(?P<device>^[a-zA-Z0-9_-]+)(.*)Link encap:(.*).*',
             '(.*)Link encap:(.*)(HWaddr )(?P<ether>[^\s]*).*',
             '.*(inet addr:)(?P<inet>[^\s]*).*',
             '.*(inet6 addr: )(?P<inet6>[^\s\/]*/(?P<prefixlen>[\d]*)).*',
